@@ -1,0 +1,8 @@
+{
+  "name": "Sticker Mule",
+  "slug": "stickermule",
+  "source": { "type": "ashby", "org": "stickermule" },
+  "alert_departments": ["Development"],
+  "ignore_departments": ["Factory"],
+  "notes": "Watch the Development department. A real requisition shows up as a new id, a re-publish, an edited description, or a compensation change. Factory postings are shift-based and out of scope for this watch."
+}

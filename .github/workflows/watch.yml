@@ -1,0 +1,61 @@
+name: jobwatch
+
+on:
+  schedule:
+    - cron: "0 7 * * *"   # daily at 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: jobwatch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check every configured board
+        id: check
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          : > strong_reports.txt
+          for cfg in config/*.json; do
+            out="$(python -m jobwatch check "$cfg" --json)"
+            echo "$out"
+            case "$(jq -r .level <<< "$out")" in
+              STRONG)   jq -r .report <<< "$out" >> strong_reports.txt ;;
+              DEGRADED) echo "::warning::$(jq -r .name <<< "$out") could not be read today; the baseline was left untouched" ;;
+            esac
+          done
+          echo "strong=$(wc -l < strong_reports.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Commit state and reports
+        run: |
+          git config user.name "jobwatch"
+          git config user.email "jobwatch@users.noreply.github.com"
+          mkdir -p state reports
+          git add state reports
+          if ! git diff --cached --quiet; then
+            git commit -m "jobwatch: $(date -u +%F)"
+            git pull --rebase
+            git push
+          fi
+
+      - name: Open an issue on a STRONG signal
+        if: steps.check.outputs.strong != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          : > issue_body.md
+          while read -r report; do cat "$report" >> issue_body.md; echo >> issue_body.md; done < strong_reports.txt
+          gh issue create --title "STRONG hiring signal · $(date -u +%F)" --body-file issue_body.md

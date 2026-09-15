@@ -1,0 +1,8 @@
+{
+  "name": "Example Co",
+  "slug": "example",
+  "source": { "type": "ashby", "org": "REPLACE_WITH_THE_ORG_SLUG_FROM_jobs.ashbyhq.com" },
+  "alert_departments": [],
+  "ignore_departments": [],
+  "notes": "Copy this file to config/<slug>.json. An empty alert_departments list means every department alerts."
+}
